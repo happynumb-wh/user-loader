@@ -26,7 +26,8 @@ int memInit()
     printf("[%s] /dev/mem opened successfully!\n", __FUNCTION__);
 
     assert(user_mem != NULL);
-    void * ret = mmap(user_mem, MEMORY_SIZE, PROT_READ | PROT_WRITE | MAP_FIXED, MAP_SHARED, devmem_fd, MEMORY_BASE);
+    void * ret = mmap(user_mem, MEMORY_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED, devmem_fd, MEMORY_BASE);
+    // void * ret = mmap(user_mem, MEMORY_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (ret == MAP_FAILED)
     {
         printf("[%s] Error: Failed to mmap user memory, code: %ld, errno: %d\n", __FUNCTION__, (long)ret, errno);
