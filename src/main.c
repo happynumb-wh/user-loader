@@ -12,7 +12,7 @@
 
 
 __attribute__((naked, noreturn))
-void jump_with_stack_rv64(void *entry, void *new_sp) {
+void jump_with_stack(void *entry, void *new_sp) {
 #ifdef RISCV
     __asm__ volatile(
         "mv sp, a1\n\t"   // sp = new_sp
@@ -56,7 +56,7 @@ int main(int argc, char *argv[], char *envp[])
 
     stack = prepare_stack(argc - 1, &(argv[1]), envp, auxv);
 
-    jump_with_stack_rv64((void *)entry_point, stack);
+    jump_with_stack((void *)entry_point, stack);
 
     munmap(user_mem, MEMORY_SIZE);
     return 0;

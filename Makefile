@@ -1,6 +1,6 @@
 
 PWD 			= $(shell pwd)
-DIR_BUILD		= build
+BUILD_DIR		= build
 SRC_DIR 		= $(PWD)/src
 CROSS_COMPILE 	?= riscv64-unknown-linux-gnu-
 
@@ -16,46 +16,64 @@ SRC_FILES_ASM	= $(wildcard $(SRC_DIR)/*.S)
 
 
 BASENAME		= $(notdir $(SRC_FILES_C) $(SRC_FILES_ASM))
-OBJ_FILES		= $(addprefix $(DIR_BUILD)/, \
+OBJ_FILES		= $(addprefix $(BUILD_DIR)/, \
 						$(addsuffix .o, $(basename $(BASENAME))))
 
-# OBJ_FILES		= $(patsubst $(SRC_DIR)/%.c,$(DIR_BUILD)/%.o,$(SRC_FILES_C)) \
-# 				  $(patsubst $(SRC_DIR)/%.S,$(DIR_BUILD)/%.o,$(SRC_FILES_ASM))
+# OBJ_FILES		= $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRC_FILES_C)) \
+# 				  $(patsubst $(SRC_DIR)/%.S,$(BUILD_DIR)/%.o,$(SRC_FILES_ASM))
 
-TARGET			= $(DIR_BUILD)/user_loader
+TARGET			= $(BUILD_DIR)/user_loader
 
+# Opensbi
+OPENSBI_DIR     = $(PWD)/opensbi
+OPENSBI_BIOS    = $(OPENSBI_DIR)/build/platform/generic/firmware/fw_jump.bin
 
+# device tree
+DTC 			= dtc
+DTS_DIR 		= $(PWD)/dts
+DTS_FILE 		= $(DTS_DIR)/output.dts
+DTB_FILE 		= $(BUILD_DIR)/output.dtb
 
-all: $(TARGET)
+all: $(TARGET) $(OPENSBI_BIOS)
 
 $(TARGET): $(OBJ_FILES)
 	@$(CC) $(CFLAGS) -o $(TARGET) $(OBJ_FILES) -T$(LINKER_SCRIPT)
 	@echo + LD $(TARGET)
 	scp -P 12055 $(TARGET) localhost:
 
-$(DIR_BUILD):
-	@mkdir -p $(DIR_BUILD)
+# Opensbi
+$(OPENSBI_BIOS): $(DTB_FILE)
+ifeq ($(wildcard $(OPENSBI_DIR)/*),)
+	git submodule update --init $(OPENSBI_DIR)
+endif
+	$(MAKE) \
+	PLATFORM=generic \
+	CROSS_COMPILE=$(CROSS_COMPILE) \
+	FW_FDT_PATH=/home/wanghan/Workspace/OpenMC/user-loader/build/output.dtb -j`nproc` -C $(OPENSBI_DIR)
 
 
-$(DIR_BUILD)/%.o: $(SRC_DIR)/%.c | $(DIR_BUILD)
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
+
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 	@$(CC) $(CFLAGS) -c $< -o $@
 	@echo + CC $@
 
-$(DIR_BUILD)/%.o: $(SRC_DIR)/%.S | $(DIR_BUILD)
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.S | $(BUILD_DIR)
 	@$(CC) $(CFLAGS) -c $< -o $@
 	@echo + CC $@
 
-dtc:
-	@dtc -I dts -O dtb -o $(DIR_BUILD)/output.dtb $(PWD)/dts/output.dts
+$(DTB_FILE):
+	@$(DTC) -I dts -O dtb -o $(DTB_FILE) $(DTS_FILE)
 
 .PHONY: clean
 
 clean:
-	rm -rf $(DIR_BUILD)
+	rm -rf $(BUILD_DIR)
 
 
 
 # Dependencies
-DEPS = $(addprefix $(DIR_BUILD)/, \
+DEPS = $(addprefix $(BUILD_DIR)/, \
 						$(addsuffix .d, $(basename $(BASENAME))))
 -include $(DEPS)
