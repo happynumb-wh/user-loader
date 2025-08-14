@@ -41,15 +41,18 @@ $(TARGET): $(OBJ_FILES)
 	@echo + LD $(TARGET)
 	scp -P 12055 $(TARGET) localhost:
 
+dts: $(BUILD_DIR)
+	@$(DTC) -I dts -O dtb -o $(DTB_FILE) $(DTS_FILE)
+
 # Opensbi
-$(OPENSBI_BIOS): $(DTB_FILE)
+$(OPENSBI_BIOS): dts
 ifeq ($(wildcard $(OPENSBI_DIR)/*),)
 	git submodule update --init $(OPENSBI_DIR)
 endif
 	$(MAKE) \
 	PLATFORM=generic \
 	CROSS_COMPILE=$(CROSS_COMPILE) \
-	FW_FDT_PATH=/home/wanghan/Workspace/OpenMC/user-loader/build/output.dtb -j`nproc` -C $(OPENSBI_DIR)
+	FW_FDT_PATH=$(shell realpath $(DTB_FILE)) -j`nproc` -C $(OPENSBI_DIR)
 
 
 $(BUILD_DIR):
@@ -63,13 +66,14 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.S | $(BUILD_DIR)
 	@$(CC) $(CFLAGS) -c $< -o $@
 	@echo + CC $@
 
-$(DTB_FILE):
-	@$(DTC) -I dts -O dtb -o $(DTB_FILE) $(DTS_FILE)
 
-.PHONY: clean
+
+
+.PHONY: clean all dts
 
 clean:
 	rm -rf $(BUILD_DIR)
+	$(MAKE) -C $(OPENSBI_DIR) clean
 
 
 
