@@ -6,7 +6,7 @@ CROSS_COMPILE 	?= riscv64-unknown-linux-gnu-
 
 INCLUDE			= $(PWD)/include
 CC				= $(CROSS_COMPILE)gcc
-CFLAGS			= -g -O2 -MMD -I$(INCLUDE) -static
+CFLAGS			= -g -O2 -MMD -I$(INCLUDE) -static -DRISCV
 
 LINKER_SCRIPT	= $(PWD)/linker.lds
 
@@ -46,7 +46,7 @@ $(DIR_BUILD)/%.o: $(SRC_DIR)/%.S | $(DIR_BUILD)
 	@echo + CC $@
 
 dtc:
-	@dtc -I dts -O dtb -o $(DIR_BUILD)/output.dtb $(PWD)/output.dts
+	@dtc -I dts -O dtb -o $(DIR_BUILD)/output.dtb $(PWD)/dts/output.dts
 
 .PHONY: clean
 

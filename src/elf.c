@@ -44,9 +44,7 @@ uint64_t load_elf_memory(char * file, Elf64_auxv_t * auxv)
     ehdr = malloc(sizeof(Elf64_Ehdr));
     assert(ehdr != NULL);
     assert(fread(ehdr, sizeof(Elf64_Ehdr), 1, target) == 1);
-
     assert(memcmp((char *)ehdr->e_ident, ELFMAG, 3) == 0);
-
     assert(ehdr->e_type == ET_EXEC);
 
     entry_point = ehdr->e_entry;
@@ -62,7 +60,6 @@ uint64_t load_elf_memory(char * file, Elf64_auxv_t * auxv)
     
     for(int i = 0; i < phnum; i++)
     {
-        // Map segment into memory
         if (phdr[i].p_type == PT_LOAD)
         {
             user_mem = (void *)phdr[i].p_vaddr;
@@ -121,15 +118,15 @@ uint64_t load_elf_memory(char * file, Elf64_auxv_t * auxv)
     return entry_point;
 }
 
-// sp is the stack pointer
 void * prepare_stack(int argc, char * argv[], char * envp[], Elf64_auxv_t * auxv)
 {
+    // sp is the stack pointer
     uint64_t sp = (uint64_t)user_mem + MEMORY_SIZE;
     char * new_argv[argc + 1];
     char * new_envp[envp_count + 1];
     new_argv[argc] = NULL;
     new_envp[envp_count] = NULL;
-    // Push command line arguments onto the stack
+    // Push command line arguments into the stack
     for (int i = argc - 1; i >= 0; i--)
     {
         sp -= (strlen(argv[i]) + 1);
@@ -137,7 +134,7 @@ void * prepare_stack(int argc, char * argv[], char * envp[], Elf64_auxv_t * auxv
         strcpy((char *)sp, argv[i]);
     }
 
-    // Push environment onto the stack
+    // Push environment variables into the stack
     for (int i = envp_count - 1; i >= 0; i--)
     {
         sp -= (strlen(envp[i]) + 1);
@@ -146,7 +143,7 @@ void * prepare_stack(int argc, char * argv[], char * envp[], Elf64_auxv_t * auxv
     }
 
     sp = sp & ~0xF;
-    // Push auxiliary vector onto the stack
+    // Push auxiliary vector into the stack
     sp -= sizeof(Elf64_auxv_t) * (auxv_count + 1);
     memcpy((void *)sp, auxv, sizeof(Elf64_auxv_t) * (auxv_count + 1));
 
@@ -158,7 +155,8 @@ void * prepare_stack(int argc, char * argv[], char * envp[], Elf64_auxv_t * auxv
     sp -= (argc + 1) * sizeof(char *);
     memcpy((void *)sp, new_argv, sizeof(char *) * (argc + 1));
     sp -= sizeof(char *);
-
+    
+    // Push argc into the stack
     *(uint64_t *)sp = argc;
 
     printf("[%s] Info: stack prepared at %p\n", __FUNCTION__, (void *)sp);

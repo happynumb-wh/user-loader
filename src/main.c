@@ -13,12 +13,14 @@
 
 __attribute__((naked, noreturn))
 void jump_with_stack_rv64(void *entry, void *new_sp) {
+#ifdef RISCV
     __asm__ volatile(
         "mv sp, a1\n\t"   // sp = new_sp
         "mv t0, a0\n\t"
         "li a0, 0\n\t"
         "jr t0\n\t"       // jump to entry
     );
+#endif
 }
 
 int main(int argc, char *argv[], char *envp[])
