@@ -2,13 +2,13 @@
 PWD 			= $(shell pwd)
 BUILD_DIR		= build
 SRC_DIR 		= $(PWD)/src
-CROSS_COMPILE 	?= riscv64-unknown-linux-gnu-
+CROSS_COMPILE 	?= 
 
 INCLUDE			= $(PWD)/include
-CC				= $(CROSS_COMPILE)gcc
-CFLAGS			= -g -O2 -MMD -I$(INCLUDE) -static -DRISCV
+CC				= $(CROSS_COMPILE)clang
+CFLAGS			= -g -O2 -MMD -I$(INCLUDE) -static -DX86
 
-LINKER_SCRIPT	= $(PWD)/linker.lds
+LINKER_SCRIPT	= $(PWD)/x86.lds
 
 # SRC FILE, may used standard library
 SRC_FILES_C		= $(wildcard $(SRC_DIR)/*.c)
@@ -28,18 +28,23 @@ TARGET			= $(BUILD_DIR)/user_loader
 OPENSBI_DIR     = $(PWD)/opensbi
 OPENSBI_BIOS    = $(OPENSBI_DIR)/build/platform/generic/firmware/fw_jump.bin
 
+# Jemalloc
+JEMALLOC_DIR	= $(PWD)/jemalloc
+JEMALLOC_TARGET = $(BUILD_DIR)//lib/libjemalloc.a
+
+
 # device tree
 DTC 			= dtc
 DTS_DIR 		= $(PWD)/dts
 DTS_FILE 		= $(DTS_DIR)/output.dts
 DTB_FILE 		= $(BUILD_DIR)/output.dtb
 
-all: $(TARGET) $(OPENSBI_BIOS)
+all: $(TARGET) $(JEMALLOC_TARGET)
 
 $(TARGET): $(OBJ_FILES)
-	@$(CC) $(CFLAGS) -o $(TARGET) $(OBJ_FILES) -T$(LINKER_SCRIPT)
+	@$(CC) $(CFLAGS) -o $(TARGET) $(OBJ_FILES) -Wl,--no-relax -T$(LINKER_SCRIPT)
 	@echo + LD $(TARGET)
-	scp -P 12055 $(TARGET) localhost:
+	scp -P 2222 $(TARGET) localhost:
 
 dts: $(BUILD_DIR)
 	@$(DTC) -I dts -O dtb -o $(DTB_FILE) $(DTS_FILE)
@@ -54,6 +59,13 @@ endif
 	CROSS_COMPILE=$(CROSS_COMPILE) \
 	FW_FDT_PATH=$(shell realpath $(DTB_FILE)) -j`nproc` -C $(OPENSBI_DIR)
 
+# Jemalloc
+$(JEMALLOC_TARGET): $(BUILD_DIR)
+ifeq ($(wildcard $(JEMALLOC_DIR)/*),)
+	git submodule update --init $(JEMALLOC_DIR)
+endif
+	cd $(JEMALLOC_DIR) && ./autogen.sh && ./configure --disable-dss CFLAGS="-g -ggdb3"
+	$(MAKE) -C $(JEMALLOC_DIR)
 
 $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
@@ -66,6 +78,9 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.S | $(BUILD_DIR)
 	@$(CC) $(CFLAGS) -c $< -o $@
 	@echo + CC $@
 
+$(DTB_FILE): $(DTS_FILE) | $(BUILD_DIR)
+	@$(DTC) -I dts -O dtb -o $(DTB_FILE) $(DTS_FILE)
+	@echo + DTC $(DTB_FILE)
 
 
 
@@ -73,7 +88,8 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.S | $(BUILD_DIR)
 
 clean:
 	rm -rf $(BUILD_DIR)
-	$(MAKE) -C $(OPENSBI_DIR) clean
+	@$(MAKE) -C $(OPENSBI_DIR) clean
+	@$(MAKE) -C $(JEMALLOC_DIR) clean
 
 
 

@@ -27,7 +27,7 @@ static uint64_t seg_flag_to_prot(uint64_t flags)
 
 uint64_t load_elf_memory(char * file, Elf64_auxv_t * auxv)
 {
-    Elf64_Ehdr *ehdr;
+    Elf64_Ehdr ehdr;
 
     int phnum;
 
@@ -41,23 +41,21 @@ uint64_t load_elf_memory(char * file, Elf64_auxv_t * auxv)
         exit(EXIT_FAILURE);
     }
 
-    ehdr = malloc(sizeof(Elf64_Ehdr));
-    assert(ehdr != NULL);
-    assert(fread(ehdr, sizeof(Elf64_Ehdr), 1, target) == 1);
-    assert(memcmp((char *)ehdr->e_ident, ELFMAG, 3) == 0);
-    assert(ehdr->e_type == ET_EXEC);
+    assert(fread(&ehdr, sizeof(Elf64_Ehdr), 1, target) == 1);
+    assert(memcmp((char *)ehdr.e_ident, ELFMAG, 3) == 0);
+    assert(ehdr.e_type == ET_EXEC);
 
-    entry_point = ehdr->e_entry;
+    entry_point = ehdr.e_entry;
     printf("[%s] Info: ELF file %s loaded, entry point at 0x%lx\n", __FUNCTION__, file, entry_point);
 
-    fseek(target, ehdr->e_phoff, SEEK_SET);
+    fseek(target, ehdr.e_phoff, SEEK_SET);
 
-    phnum = ehdr->e_phnum;
+    phnum = ehdr.e_phnum;
     assert(phnum <= SEG_NUM);
 
-    fread(phdr, sizeof(Elf64_Phdr), ehdr->e_phnum, target);
-    
-    
+    assert(fread(phdr, sizeof(Elf64_Phdr), ehdr.e_phnum, target) == ehdr.e_phnum);
+
+
     for(int i = 0; i < phnum; i++)
     {
         if (phdr[i].p_type == PT_LOAD)
@@ -71,7 +69,7 @@ uint64_t load_elf_memory(char * file, Elf64_auxv_t * auxv)
     {
         if (auxv[i].a_type == AT_PHDR)
         {
-            auxv[i].a_un.a_val = (uint64_t)user_mem + ehdr->e_phoff;
+            auxv[i].a_un.a_val = (uint64_t)user_mem + ehdr.e_phoff;
         }
 
         if (auxv[i].a_type == AT_PHNUM)
@@ -81,7 +79,7 @@ uint64_t load_elf_memory(char * file, Elf64_auxv_t * auxv)
 
         if (auxv[i].a_type == AT_PHENT)
         {
-            auxv[i].a_un.a_val = ehdr->e_phentsize;
+            auxv[i].a_un.a_val = ehdr.e_phentsize;
         }
 
         if (auxv[i].a_type == AT_ENTRY)
@@ -100,7 +98,7 @@ uint64_t load_elf_memory(char * file, Elf64_auxv_t * auxv)
         {
             printf("[%s] Segment<%d> loaded at address %p, length 0x%lx\n", __FUNCTION__, i, (void *)phdr[i].p_vaddr, phdr[i].p_memsz);
             fseek(target, phdr[i].p_offset, SEEK_SET);
-            fread((void *)phdr[i].p_vaddr, 1, phdr[i].p_filesz, target);
+            assert(fread((void *)phdr[i].p_vaddr, 1, phdr[i].p_filesz, target) == phdr[i].p_filesz);
             if (phdr[i].p_memsz > phdr[i].p_filesz)
             {
                 memset((void *)(phdr[i].p_vaddr + phdr[i].p_filesz), 0, phdr[i].p_memsz - phdr[i].p_filesz);
@@ -111,9 +109,8 @@ uint64_t load_elf_memory(char * file, Elf64_auxv_t * auxv)
 
 
     fclose(target);
-    free(ehdr);
 
-    printf("[%s] Info: user loader loaded ELF file successfully!\n", __FUNCTION__);
+    printf("[%s] Info: user loader loaded ELF file %s\n", __FUNCTION__, file);
 
     return entry_point;
 }
@@ -155,7 +152,7 @@ void * prepare_stack(int argc, char * argv[], char * envp[], Elf64_auxv_t * auxv
     sp -= (argc + 1) * sizeof(char *);
     memcpy((void *)sp, new_argv, sizeof(char *) * (argc + 1));
     sp -= sizeof(char *);
-    
+
     // Push argc into the stack
     *(uint64_t *)sp = argc;
 

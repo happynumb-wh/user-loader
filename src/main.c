@@ -11,8 +11,17 @@
 #include <mem.h>
 
 
-__attribute__((naked, noreturn))
+__attribute__((noinline, noreturn))
 void jump_with_stack(void *entry, void *new_sp) {
+    __asm__ volatile(
+        "mov %0, %%rax\n\t"
+        "mov %1, %%rsp\n\t"
+        "jmp *%%rax\n\t"
+        :
+        : "r"(entry), "r"(new_sp)
+        : "rax"
+    );
+
 #ifdef RISCV
     __asm__ volatile(
         "mv sp, a1\n\t"   // sp = new_sp
@@ -21,6 +30,7 @@ void jump_with_stack(void *entry, void *new_sp) {
         "jr t0\n\t"       // jump to entry
     );
 #endif
+    __builtin_unreachable();
 }
 
 int main(int argc, char *argv[], char *envp[])

@@ -1,3 +1,6 @@
 [submodule "opensbi"]
 	path = opensbi
 	url = https://github.com/happynumb-wh/opensbi.git
+[submodule "jemalloc"]
+	path = jemalloc
+	url = https://github.com/happynumb-wh/jemalloc.git
