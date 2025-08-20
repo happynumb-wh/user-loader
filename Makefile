@@ -5,7 +5,7 @@ SRC_DIR 		= $(PWD)/src
 CROSS_COMPILE 	?= 
 
 INCLUDE			= $(PWD)/include
-CC				= $(CROSS_COMPILE)clang
+CC				= $(CROSS_COMPILE)gcc
 CFLAGS			= -g -O2 -MMD -I$(INCLUDE) -static -DX86
 
 LINKER_SCRIPT	= $(PWD)/x86.lds
@@ -39,7 +39,7 @@ DTS_DIR 		= $(PWD)/dts
 DTS_FILE 		= $(DTS_DIR)/output.dts
 DTB_FILE 		= $(BUILD_DIR)/output.dtb
 
-all: $(TARGET) $(JEMALLOC_TARGET)
+all: $(TARGET)
 
 $(TARGET): $(OBJ_FILES)
 	@$(CC) $(CFLAGS) -o $(TARGET) $(OBJ_FILES) -Wl,--no-relax -T$(LINKER_SCRIPT)

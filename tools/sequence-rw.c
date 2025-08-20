@@ -27,10 +27,10 @@ int main() {
         close(dev_fd);
         exit(EXIT_FAILURE);
     }
-
+    volatile register uint64_t used = 0;
     // Every cache line
     for (size_t i = 0; i < MEMORY_SIZE / 64; i++) {
-        mapped_mem[i*8] = 0xdeadbeef;
+        used = mapped_mem[i*8];
     }
 
     munmap(mapped_mem, MEMORY_SIZE);
