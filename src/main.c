@@ -33,6 +33,18 @@ void jump_with_stack(void *entry, void *new_sp) {
     __builtin_unreachable();
 }
 
+void get_continue()
+{
+    char input;
+    printf("Continue? (y/n): ");
+    int ret =  scanf(" %c", &input);
+    if (input == 'y' || input == 'Y') {
+        // Continue execution
+    } else {
+        // Stop execution
+    }
+}
+
 int main(int argc, char *argv[], char *envp[])
 {
     
@@ -65,6 +77,14 @@ int main(int argc, char *argv[], char *envp[])
     entry_point = load_elf_memory(argv[1], auxv);
 
     stack = prepare_stack(argc - 1, &(argv[1]), envp, auxv);
+
+    // clear_cache();
+    flush_memory(user_mem, MEMORY_SIZE);
+    clear_cache();
+    get_continue();
+
+    // clear all cache
+
 
     jump_with_stack((void *)entry_point, stack);
 

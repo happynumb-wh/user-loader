@@ -8,8 +8,8 @@
 #include <assert.h>
 #include <string.h>
 
-#define MEMORY_BASE 0x200000000
-#define MEMORY_SIZE 0x200000000
+#define MEMORY_BASE 0x400000000
+#define MEMORY_SIZE 0x800000000
 
 
 

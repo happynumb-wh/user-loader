@@ -6,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <errno.h>
 
 #include <mem.h>
 #include <loader.h>
@@ -103,7 +104,14 @@ uint64_t load_elf_memory(char * file, Elf64_auxv_t * auxv)
             {
                 memset((void *)(phdr[i].p_vaddr + phdr[i].p_filesz), 0, phdr[i].p_memsz - phdr[i].p_filesz);
             }
-            mprotect((void *)(phdr[i].p_vaddr & ~0xFFF), phdr[i].p_memsz, seg_flag_to_prot(phdr[i].p_flags));
+            int ret =  mprotect((void *)(phdr[i].p_vaddr & ~0xFFF), phdr[i].p_memsz + (phdr[i].p_vaddr & 0xFFF), seg_flag_to_prot(phdr[i].p_flags));
+            brk_start = (void *)((phdr[i].p_vaddr + phdr[i].p_memsz + 0x1000 -1) & ~0xFFF);
+            if (ret != 0)
+            {
+                printf("[%s] Error: Failed to set memory protection, errno: %d\n", __FUNCTION__, errno);
+                exit(EXIT_FAILURE);
+            }
+        
         }
     }
 

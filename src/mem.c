@@ -9,10 +9,27 @@
 #include <string.h>
 
 #include <mem.h>
+#include <x86intrin.h>
 
 int devmem_fd = -1;
 void * user_mem;
+void * brk_start;
 #define PAGE_SIZE 4096
+#define CACHE_LINE_SIZE 64
+
+void flush_memory(void *ptr, size_t size) {
+    uintptr_t start = (uintptr_t)ptr;
+    uintptr_t end   = start + size;
+
+    for (uintptr_t p = start; p < end; p += CACHE_LINE_SIZE) {
+        _mm_clflush((void*)p);
+    }
+
+    _mm_mfence();
+}
+
+
+
 
 void * mmap_vm_to_phy(void *addr, size_t length, int prot)
 {
@@ -28,6 +45,30 @@ void * mmap_vm_to_phy(void *addr, size_t length, int prot)
     return ret;
 }
 
+int clear_cache()
+{
+    uint64_t * begin = mmap(NULL, CACHE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, devmem_fd, CACHE_BASE);
+    if (begin == MAP_FAILED)
+    {
+        printf("[%s] Error: Failed to mmap cache memory, code: %ld, errno: %d\n", __FUNCTION__, (long)begin, errno);
+        exit(EXIT_FAILURE);
+    }
+
+    volatile uint64_t used = 0;
+
+    for (size_t i = 0; i < CACHE_SIZE / sizeof(uint64_t); i++)
+    {
+        used = begin[i];
+    }
+
+    printf("[%s] Clear Cache with size: 0x%lx\n", __FUNCTION__, CACHE_SIZE);
+    munmap(begin, CACHE_SIZE);
+
+    return 0;
+}
+
+
+
 
 int memInit()
 {
@@ -42,8 +83,9 @@ int memInit()
 
     assert(user_mem != NULL);
     void * ret = mmap(user_mem, MEMORY_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED, devmem_fd, MEMORY_BASE);
-    memset(user_mem, 0, MEMORY_SIZE);
     // void * ret = mmap(user_mem, MEMORY_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+    
     if (ret == MAP_FAILED)
     {
         printf("[%s] Error: Failed to mmap user memory, code: %ld, errno: %d\n", __FUNCTION__, (long)ret, errno);
@@ -56,7 +98,7 @@ int memInit()
         close(devmem_fd);
         exit(EXIT_FAILURE);
     }
-
+    memset(user_mem, 0, MEMORY_SIZE);
     printf("[%s] User memory ADDR: %p, Length: 0x%lx mapped\n", __FUNCTION__, user_mem, (uint64_t)MEMORY_SIZE);
     return 0;
 }

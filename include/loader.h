@@ -7,6 +7,7 @@
 
 
 extern void * user_mem;
+extern void * brk_start;
 extern Elf64_auxv_t auxv[AT_NUM];
 extern int auxv_count;
 extern int envp_count;

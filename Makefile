@@ -6,7 +6,7 @@ CROSS_COMPILE 	?=
 
 INCLUDE			= $(PWD)/include
 CC				= $(CROSS_COMPILE)gcc
-CFLAGS			= -g -O2 -MMD -I$(INCLUDE) -static -DX86
+CFLAGS			= -g -O2 -MMD -I$(INCLUDE) -static -Wno-unused-result -DX86 
 
 LINKER_SCRIPT	= $(PWD)/x86.lds
 
