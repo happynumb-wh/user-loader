@@ -14,3 +14,4 @@ extern int envp_count;
 
 uint64_t load_elf_memory(char * file, Elf64_auxv_t * auxv);
 void * prepare_stack(int argc, char * argv[], char * envp[], Elf64_auxv_t * auxv);
+void * prepare_stack_with_file(const char * file);

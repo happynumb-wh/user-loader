@@ -123,6 +123,37 @@ uint64_t load_elf_memory(char * file, Elf64_auxv_t * auxv)
     return entry_point;
 }
 
+
+void * prepare_stack_with_file(const char * file)
+{
+    FILE * stack_file = fopen(file, "r");
+    if (!stack_file) {
+        perror("Failed to open stack file");
+        return NULL;
+    }
+
+    // Read the stack content from the file
+    fseek(stack_file, 0, SEEK_END);
+    size_t stack_size = ftell(stack_file);
+    fseek(stack_file, 0, SEEK_SET);
+
+    void * stack = (void *)((uint64_t)user_mem + MEMORY_SIZE - stack_size);
+
+    if (fread(stack, 1, stack_size, stack_file) != stack_size) {
+        perror("Failed to read stack file");
+        fclose(stack_file);
+        return NULL;
+    }
+
+    fclose(stack_file);
+    printf("[%s] Info: stack prepared at %p\n", __FUNCTION__, (void *)stack);
+
+    return stack;
+}
+
+
+
+
 void * prepare_stack(int argc, char * argv[], char * envp[], Elf64_auxv_t * auxv)
 {
     // sp is the stack pointer
@@ -146,6 +177,28 @@ void * prepare_stack(int argc, char * argv[], char * envp[], Elf64_auxv_t * auxv
         new_envp[i] = (char *)sp;
         strcpy((char *)sp, envp[i]);
     }
+
+
+    sp -= 16;
+    printf("[%s] Info: reserve 16 bytes for AT_RANDOM\n", __FUNCTION__);
+    for (int i = 0; i < auxv_count; i++)
+    {
+        if (auxv[i].a_type == AT_RANDOM){
+            printf("[%s] Info: AT_RANDOM at %p\n", __FUNCTION__, (void *)sp);
+            memcpy((void *)sp, (void *)auxv[i].a_un.a_val, 16);
+            auxv[i].a_un.a_val = sp;
+        }
+        if (auxv[i].a_type == AT_SYSINFO_EHDR)
+        {
+            printf("[%s] Info: AT_SYSINFO_EHDR at %p\n", __FUNCTION__, (void *)auxv[i].a_un.a_val);
+        }
+
+        if (auxv[i].a_type == AT_SYSINFO)
+        {
+            printf("[%s] Info: AT_SYSINFO at %p\n", __FUNCTION__, (void *)auxv[i].a_un.a_val);
+        }
+    }
+
 
     sp = sp & ~0xF;
     // Push auxiliary vector into the stack

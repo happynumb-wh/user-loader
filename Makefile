@@ -2,13 +2,13 @@
 PWD 			= $(shell pwd)
 BUILD_DIR		= build
 SRC_DIR 		= $(PWD)/src
-CROSS_COMPILE 	?= 
+CROSS_COMPILE 	?= riscv64-unknown-linux-gnu-
 
 INCLUDE			= $(PWD)/include
 CC				= $(CROSS_COMPILE)gcc
-CFLAGS			= -g -O2 -MMD -I$(INCLUDE) -static -Wno-unused-result -DX86 
+CFLAGS			= -g -O2 -MMD -I$(INCLUDE) -static -Wno-unused-result -march=rv64gc_zicbom_zicboz_zicbop -mabi=lp64d -DRISCV
 
-LINKER_SCRIPT	= $(PWD)/x86.lds
+LINKER_SCRIPT	= $(PWD)/riscv.lds
 
 # SRC FILE, may used standard library
 SRC_FILES_C		= $(wildcard $(SRC_DIR)/*.c)
@@ -44,7 +44,6 @@ all: $(TARGET)
 $(TARGET): $(OBJ_FILES)
 	@$(CC) $(CFLAGS) -o $(TARGET) $(OBJ_FILES) -Wl,--no-relax -T$(LINKER_SCRIPT)
 	@echo + LD $(TARGET)
-	scp -P 2222 $(TARGET) localhost:
 
 dts: $(BUILD_DIR)
 	@$(DTC) -I dts -O dtb -o $(DTB_FILE) $(DTS_FILE)
@@ -88,8 +87,8 @@ $(DTB_FILE): $(DTS_FILE) | $(BUILD_DIR)
 
 clean:
 	rm -rf $(BUILD_DIR)
-	@$(MAKE) -C $(OPENSBI_DIR) clean
-	@$(MAKE) -C $(JEMALLOC_DIR) clean
+# 	@$(MAKE) -C $(OPENSBI_DIR) clean
+# 	@$(MAKE) -C $(JEMALLOC_DIR) clean
 
 
 
