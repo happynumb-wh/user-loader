@@ -169,12 +169,16 @@ int main(int argc, char *argv[], char *envp[])
     }
 #ifndef USER
     flush_memory(user_mem, MEMORY_SIZE);
+#ifdef RISCV
     clear_cache();
+#endif
     get_continue();
 
+#ifdef RISCV
     // clear all cache
     __asm__ volatile("fence.i");
     __asm__ volatile("fence");
+#endif
 #endif
 
 

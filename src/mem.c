@@ -21,9 +21,13 @@ void * brk_start;
 
 
 void flush_memory(void *ptr, size_t size) {
-#ifdef X86
     uintptr_t start = (uintptr_t)ptr;
-    uintptr_t end   = start + size;
+    uintptr_t end   = start + size;    
+
+    if (size == 0)
+        return;
+
+#ifdef X86
 
     for (uintptr_t p = start; p < end; p += CACHE_LINE_SIZE) {
         _mm_clflush((void*)p);
@@ -32,11 +36,10 @@ void flush_memory(void *ptr, size_t size) {
     _mm_mfence();
 #endif
 
-    uintptr_t start = (uintptr_t)ptr;
-    uintptr_t end   = start + size;
 
-    if (size == 0)
-        return;
+
+
+#ifdef RISCV
 
     /* 向下对齐 start，向上对齐 end 到 cache line 边界 */
     start &= ~(CACHE_LINE_SIZE - 1);
@@ -51,9 +54,6 @@ void flush_memory(void *ptr, size_t size) {
     }
 
     asm volatile("fence iorw, iorw" ::: "memory");
-
-#ifdef RISCV
-
 
 #endif
 }

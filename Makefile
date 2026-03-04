@@ -2,13 +2,32 @@
 PWD 			= $(shell pwd)
 BUILD_DIR		= build
 SRC_DIR 		= $(PWD)/src
-CROSS_COMPILE 	?= riscv64-unknown-linux-gnu-
+CROSS_COMPILE 	?= 
+ARCH			?= RISCV 
+
+CFLAGS			= -g -O2 -MMD -I$(INCLUDE) -static -Wno-unused-result -D$(ARCH)
+
+ifeq ($(ARCH), RISCV)
+	CROSS_COMPILE = riscv64-unknown-linux-gnu-
+	CFLAGS += -march=rv64gc_zicbom_zicboz_zicbop -mabi=lp64d
+else
+	CROSS_COMPILE = 
+endif
+
 
 INCLUDE			= $(PWD)/include
 CC				= $(CROSS_COMPILE)gcc
-CFLAGS			= -g -O2 -MMD -I$(INCLUDE) -static -Wno-unused-result -march=rv64gc_zicbom_zicboz_zicbop -mabi=lp64d -DRISCV
+# CFLAGS			= -g -O2 -MMD -I$(INCLUDE) -static -Wno-unused-result -march=rv64gc_zicbom_zicboz_zicbop -mabi=lp64d -D$(ARCH)
 
-LINKER_SCRIPT	= $(PWD)/riscv.lds
+LINKER_SCRIPT	?=
+
+ifeq ($(ARCH), RISCV)
+	LINKER_SCRIPT = $(PWD)/riscv.lds
+else
+	LINKER_SCRIPT = $(PWD)/x86.lds
+endif
+
+
 
 # SRC FILE, may used standard library
 SRC_FILES_C		= $(wildcard $(SRC_DIR)/*.c)
