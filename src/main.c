@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <elf.h>
 #include <sys/mman.h>
+#include <time.h>
 
 #include <loader.h>
 #include <mem.h>
@@ -15,6 +16,25 @@
 #else
 #define __ASM_STR(x)	#x
 #endif
+
+static double timespec_diff_seconds(const struct timespec *end,
+					     const struct timespec *start)
+{
+	time_t sec = end->tv_sec - start->tv_sec;
+	long nsec = end->tv_nsec - start->tv_nsec;
+	if (nsec < 0) {
+		sec -= 1;
+		nsec += 1000000000L;
+	}
+	return (double)sec + (double)nsec / 1000000000.0;
+}
+
+static void format_timestamp(const struct timespec *ts, char *buffer, size_t size)
+{
+	struct tm tm_info;
+	localtime_r(&ts->tv_sec, &tm_info);
+	strftime(buffer, size, "%Y-%m-%d %H:%M:%S", &tm_info);
+}
 
 
 #ifdef RISCV
@@ -119,13 +139,28 @@ void get_continue()
 
 int main(int argc, char *argv[], char *envp[])
 {
-    
+    struct timespec loader_start_ts = {0};
+    struct timespec ready_ts = {0};
+    char loader_start_buf[32];
+    char ready_buf[32];
+    int have_loader_start = 0;
+
     void * base;
     void * stack;
     uint64_t entry_point;
     Elf64_auxv_t * init_auxv;
     char * target_elf = NULL;
     int used_exist_stack_file = 0;
+
+    if (clock_gettime(CLOCK_REALTIME, &loader_start_ts) == 0) {
+        have_loader_start = 1;
+        format_timestamp(&loader_start_ts, loader_start_buf,
+                 sizeof(loader_start_buf));
+        printf("[%s] start time: %s.%09ld\n",
+               __FUNCTION__, loader_start_buf, loader_start_ts.tv_nsec);
+    } else {
+        perror("clock_gettime (start)");
+    }
 
     for (envp_count = 0; envp[envp_count] != NULL; envp_count++);
 
@@ -181,6 +216,19 @@ int main(int argc, char *argv[], char *envp[])
 #endif
 #endif
 
+    if (clock_gettime(CLOCK_REALTIME, &ready_ts) == 0) {
+        format_timestamp(&ready_ts, ready_buf, sizeof(ready_buf));
+        printf("[%s] pre-jump time: %s.%09ld\n",
+               __FUNCTION__, ready_buf, ready_ts.tv_nsec);
+        if (have_loader_start) {
+            double prep_seconds =
+                timespec_diff_seconds(&ready_ts, &loader_start_ts);
+            printf("[%s] preparation duration: %.6f s\n",
+                   __FUNCTION__, prep_seconds);
+        }
+    } else {
+        perror("clock_gettime (pre-jump)");
+    }
 
     jump_with_stack((void *)entry_point, stack);
 

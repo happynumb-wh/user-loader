@@ -28,7 +28,7 @@ void flush_memory(void *ptr, size_t size) {
         return;
 
 #ifdef X86
-
+    printf("[%s] Flushing memory range: %p - %p\n", __FUNCTION__, (void *)start, (void *)end);
     for (uintptr_t p = start; p < end; p += CACHE_LINE_SIZE) {
         _mm_clflush((void*)p);
     }
@@ -147,7 +147,7 @@ int memInit()
 
     void * ret = mmap(user_mem, MEMORY_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED, devmem_fd, MEMORY_BASE);
 #else
-    void * ret = mmap(user_mem, MEMORY_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    void * ret = mmap(user_mem, MEMORY_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
 #endif
     
     if (ret == MAP_FAILED)

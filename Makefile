@@ -5,7 +5,7 @@ SRC_DIR 		= $(PWD)/src
 CROSS_COMPILE 	?= 
 ARCH			?= RISCV 
 
-CFLAGS			= -g -O2 -MMD -I$(INCLUDE) -static -Wno-unused-result -D$(ARCH)
+CFLAGS			= -g -O0 -MMD -I$(INCLUDE) -static -Wno-unused-result -D$(ARCH) -DUSER
 
 ifeq ($(ARCH), RISCV)
 	CROSS_COMPILE = riscv64-unknown-linux-gnu-
@@ -23,8 +23,10 @@ LINKER_SCRIPT	?=
 
 ifeq ($(ARCH), RISCV)
 	LINKER_SCRIPT = $(PWD)/riscv.lds
+	CFLAGS += -DRISCV
 else
 	LINKER_SCRIPT = $(PWD)/x86.lds
+	CFLAGS += -DX86
 endif
 
 

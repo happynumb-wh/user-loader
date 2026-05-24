@@ -8,14 +8,14 @@
 #include <assert.h>
 #include <string.h>
 
-#define MEMORY_BASE 0x400000000
-#define MEMORY_SIZE 0x800000000
+#define MEMORY_BASE 0x100000000
+#define MEMORY_SIZE 0x100000000
 
 
 
 int main() {
 
-    int dev_fd = open("/dev/mem", O_RDWR | O_SYNC);
+    int dev_fd = open("/dev/mem", O_RDWR);
     if (dev_fd < 0) {
         printf("[%s] Failed to open /dev/mem", __FUNCTION__);
         exit(EXIT_FAILURE);

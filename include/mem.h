@@ -10,6 +10,7 @@
 
 
 // base define
+// #define MEMORY_BASE  (4 * GB)
 #define MEMORY_BASE  (4 * GB)
 #define USER_BASE    0x10000
 #define MEMORY_SIZE  (4 * GB)
